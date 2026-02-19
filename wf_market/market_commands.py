@@ -1,51 +1,80 @@
-# wf_market/market_commands.py
 import discord
 from discord import app_commands
-from wf_market.market_api import find_best_matches, get_market_prices
+from wf_market.market_api import client_v2
 
-COLOR_MARKET = 0x3498DB
-COLOR_WARN = 0xF1C40F
+# 统一使用绿色风格
+COLOR_MARKET_GREEN = 0x2ECC71 
 
 def setup(tree: app_commands.CommandTree):
-    @tree.command(name="市场", description="查询物品价格（支持中文模糊匹配）")
-    @app_commands.describe(物品="输入中文或英文物品名称")
-    async def market(interaction: discord.Interaction, 物品: str):
+    @tree.command(name="市场", description="Warframe Market V2 实时查询 (支持MOD/赋能等级)")
+    @app_commands.describe(
+        物品="输入中文或英文物品名称", 
+        等级="如果是MOD或赋能可选填等级 (0-max)，非此类物品请勿填写"
+    )
+    async def market(interaction: discord.Interaction, 物品: str, 等级: int = None):
         await interaction.response.defer(thinking=True)
         
-        best_match, recommendations = find_best_matches(物品)
+        # 1. 扫描匹配物品并获取类型
+        item_info = client_v2.find_item_slug(物品)
+        if not item_info:
+            await interaction.followup.send(f"❌ 查不到 “{物品}”，请尝试输入更准确的名称。")
+            return
+
+        # 2. 等级逻辑处理
+        # 如果不是 MOD/赋能 却填了等级，直接拦截
+        if 等级 is not None and not item_info.get('is_rankable'):
+            await interaction.followup.send(f"⚠️ **{item_info['name']}** 没有等级概念，无法指定等级查询。")
+            return
+
+        # 如果是 MOD/赋能 且没填等级，默认查 0 级
+        target_rank = 等级
+        if item_info.get('is_rankable') and 等级 is None:
+            target_rank = 0
+
+        # 3. 获取数据 (带入 rank 参数)
+        data = client_v2.get_market_data(item_info['slug'], rank=target_rank)
+        if not data:
+            await interaction.followup.send(f"⚠️ 无法获取 **{item_info['name']}** 的价格数据。")
+            return
+
+        # 4. 构造 Embed
+        # 如果有等级，在标题中显示
+        title_rank = f" (Rank {target_rank})" if target_rank is not None else ""
+        embed = discord.Embed(
+            title=f"📊 {item_info['name']}{title_rank}",
+            url=f"https://warframe.market/zh-hant/items/{item_info['slug']}",
+            color=COLOR_MARKET_GREEN
+        )
+
+        # 辅助函数：将状态转换为简洁文字
+        def get_status_text(status):
+            if status == 'ingame':
+                return " (游戏中)"
+            elif status == 'online':
+                return " (在线)"
+            return ""
+
+        # 5. 卖家展示 (Sell - 上方)
+        sell_text = ""
+        for o in data['sell']:
+            user = o['user']
+            status = get_status_text(user['status'])
+            # 格式：价格 | **名字** (状态)
+            sell_text += f"{o['platinum']} Pt | **{user['ingameName']}**{status}\n"
         
-        # 情况 1: 完美匹配成功
-        if best_match:
-            orders = get_market_prices(best_match['url_name'])
-            if not orders:
-                await interaction.followup.send(f"✅ 找到物品 **{best_match['item_name']}**，但目前没有在线玩家出售。")
-                return
+        if sell_text:
+            embed.add_field(name="💰 卖家报价 (低价优先)", value=sell_text, inline=False)
 
-            embed = discord.Embed(
-                title=f"市场查询: {best_match['item_name']}",
-                url=f"https://warframe.market/zh-hant/items/{best_match['url_name']}",
-                color=COLOR_MARKET
-            )
-            for i, o in enumerate(orders, 1):
-                val = f"价格: **{o['platinum']}** Pt | 数量: {o['quantity']}\n指令: `/w {o['user']['ingame_name']} Hi! I want to buy...`"
-                embed.add_field(name=f"Top {i} 卖家", value=val, inline=False)
-            await interaction.followup.send(embed=embed)
+        # 6. 买家展示 (Buy - 下方)
+        buy_text = ""
+        for o in data['buy']:
+            user = o['user']
+            status = get_status_text(user['status'])
+            buy_text += f"{o['platinum']} Pt | **{user['ingameName']}**{status}\n"
+            
+        if buy_text:
+            # 使用 inline=False 确保上下堆叠布局
+            embed.add_field(name="🛒 买家求购 (高价优先)", value=buy_text, inline=False)
 
-        # 情况 2: 匹配失败，显示推荐列表
-        elif recommendations:
-            embed = discord.Embed(
-                title="搜索不到你要的物品",
-                description=f"没有直接找到 “{物品}”，但是有类似的是你要的吗？",
-                color=COLOR_WARN
-            )
-            rec_text = ""
-            for i, item in enumerate(recommendations, 1):
-                rec_text += f"**{i}. {item['item_name']}**\n"
-            
-            embed.add_field(name="建议搜索:", value=rec_text)
-            embed.set_footer(text="请尝试重新输入更完整的名称")
-            await interaction.followup.send(embed=embed)
-            
-        # 情况 3: 彻底没找到
-        else:
-            await interaction.followup.send(f"❌ 搜不到你要的“{物品}”，也没有类似的建议。")
+        embed.set_footer(text="数据源：Warframe Market V2")
+        await interaction.followup.send(embed=embed)

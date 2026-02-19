@@ -1,124 +1,185 @@
 # WF Helper Bot (Chinese Version)
 
-A modular Discord bot built for Warframe utilities, focusing on data synchronization, structured database design, and API-driven automation.
+A modular Discord bot built for Warframe utilities, focusing on API-driven automation, structured database design, and real-time market intelligence.
 
 > ⚠️ This repository currently contains the Chinese command version.  
-> An English-oriented release will be published in a future update.
+> A fully localized English release will be published in a future update.
 
 ---
 
 ## Overview
 
-WF Helper Bot is designed as a structured, extensible Discord application that integrates:
+WF Helper Bot is a structured and extensible Discord application designed to provide real-time Warframe utilities through:
 
-- External game APIs
-- Local structured databases
-- Scheduled synchronization jobs
-- Modular command architecture
+- External API integration
+- Market data processing
+- Persistent database state management
+- Scheduled background synchronization
+- Event-based reminder systems
 
-The project emphasizes backend logic, data reliability, and maintainable code organization rather than simple command scripting.
+The project emphasizes backend system design, reliable data handling, and scalable architecture rather than simple command scripting.
 
 ---
 
-## Core Technical Focus
+## Core Technical Architecture
 
-### 1. Python Backend Architecture
+### 1. Python Backend System
+
 - Asynchronous Discord command handling (`discord.py`)
-- Modular command registration system
-- Background synchronization tasks
-- Structured service separation (commands / sync / core logic)
+- Modular command registration
+- Background sync task scheduling
+- Service-based structure separation:
+  - Commands
+  - Sync Jobs
+  - Core Logic
+  - Market Integration
+  - Reminder Systems
 
-### 2. Database Layer (SQLite)
-- Relic state tracking system
-- Status flag management (`Available`, `Vaulted`, `Resurgence`, etc.)
-- Metadata persistence (daily sync control, news deduplication)
-- Idempotent update logic
-- Controlled write access for concurrency safety
-
-The database is treated as a persistent state layer rather than a temporary cache.
-
-### 3. Data Synchronization
-- Integration with WarframeStat API
-- Automated Prime Resurgence detection
-- News scanning with keyword-based filtering
-- Daily controlled update cycle (UTC-based)
-- Deduplication and state validation logic
-
-This ensures that the bot maintains data accuracy without excessive API requests.
-
-### 4. Modular Expansion Design
-The project is intentionally structured to allow additional systems to be added without refactoring existing modules.
-
-Current architecture supports:
-
-- Independent feature modules
-- Dedicated sync job modules
-- Scalable command registration
-- Separation between read-only commands and write-based sync processes
-
-Future systems can be added without modifying the core bot entry point.
+The architecture allows new systems to be added without modifying the main bot entry point.
 
 ---
 
-## Example Feature Categories (Partial)
+### 2. Database Layer (SQLite Persistent Storage)
 
-The bot currently supports selected Warframe utility systems, including:
+The database is treated as a long-term state layer rather than temporary cache.
 
+Key design aspects:
+
+- Relic state tracking system
+- Vault status detection (`Vaulted`, `Available`, `Resurgence`)
+- Controlled daily sync flags
+- News and update deduplication
+- Idempotent update logic
+- Concurrency-safe write control
+- Reminder subscription persistence
+
+State mutation is carefully controlled to avoid inconsistent data across restarts.
+
+---
+
+### 3. Market Data Integration (Warframe Market API)
+
+The bot integrates with Warframe Market to provide:
+
+- Item price lookup
+- Real-time lowest sell order query
+- Market search functionality
+- Price monitoring logic
+- Market-based alert triggers
+
+Planned improvements:
+
+- Historical price tracking
+- Price volatility detection
+- Arbitrage opportunity alerts
+
+---
+
+### 4. Relic Intelligence System
+
+The bot supports structured relic analysis:
+
+- Relic lookup
+- Vaulted status detection
+- Prime Resurgence state tracking
+- Relic drop verification logic
+
+This ensures relic availability information stays synchronized with current game state.
+
+---
+
+### 5. Real-Time Fissure & Event Monitoring
+
+Comprehensive fissure tracking system:
+
+- All fissure type detection
+- Real-time fissure lookup
+- Fissure reminder subscriptions
 - Open-world cycle tracking
-- Relic status lookup
-- Prime Resurgence synchronization
-- Structured reminder logic
+- Plains / Orb Vallis / Cambion Drift notifications
+- Market reminder alerts
 
-Additional systems are planned and will be integrated progressively.
+Users can subscribe to specific event conditions and receive automated notifications.
+
+---
+
+## Feature Categories (Expandable)
+
+Current systems include:
+
+- Market price lookup & monitoring
+- Relic state tracking & vault detection
+- Prime Resurgence synchronization
+- Fissure monitoring & reminders
+- Open-world cycle tracking
+- Structured notification systems
+
+Additional systems are continuously being developed and integrated.
 
 ---
 
 ## Project Structure (Simplified)
+
 bot.py
-timecheck/
+core/
+sync/
+market/
+relic/
+fissure/
 reminder/
-relic_check/
+timecheck/
 
 
-Each module contains isolated logic and can be expanded independently.
+Each module is independently expandable without breaking the overall architecture.
 
 ---
 
 ## Setup
 
 1. Clone the repository
-2. Create a `.env` file:
-DISCORD_TOKEN=your_token_here
-3. Run: python bot.py
+2. Create a `.env` file (adding the token inside)
+3. Install dependencies (pip install -r requirements.txt)
+4. Run the bot (python bot.py)
+
 
 
 ---
 
 ## Design Philosophy
 
-This project is built with the following principles:
+This project is built around the following principles:
 
 - Data correctness over speed
+- Persistent state reliability
 - Controlled state mutation
 - Clear module boundaries
 - API abstraction
-- Expandability without architectural rewrite
+- Modular expansion capability
+- Backend-first system thinking
 
-It is intended not just as a utility bot, but as a demonstration of backend design, data handling, and structured Python development.
+It is designed not only as a utility bot, but as a demonstration of:
+
+- Structured Python backend development
+- API-driven automation systems
+- Market data processing
+- Persistent database management
+- Scalable Discord bot architecture
 
 ---
 
-## Future Roadmap
+## Roadmap
 
-The bot will continue to expand with additional systems and optimization improvements.
+Future expansions may include:
 
-The English version with full localization support will be released separately.
+- Historical market data analytics
+- Advanced price alert customization
+- Multi-language command support
+- Web dashboard integration
+- Performance optimization & caching improvements
 
 ---
 
 ## License
 
 MIT License
-
-
 

@@ -10,6 +10,11 @@ import discord
 from discord import app_commands
 
 
+# -----------------------------
+# 配置
+# -----------------------------
+
+# 你也可以把 DB 路径改成绝对路径或从 env 读取
 DB_PATH = Path("relic_check/warframe_relics.db")
 
 ERA_CHOICES = [
@@ -31,7 +36,9 @@ COLOR_ERR = 0xE74C3C
 COLOR_INFO = 0x2ECC71
 
 
-
+# -----------------------------
+# 数据结构
+# -----------------------------
 
 @dataclass(frozen=True)
 class RelicRow:
@@ -39,10 +46,18 @@ class RelicRow:
     last_updated: str
 
 
+# -----------------------------
+# 工具函数
+# -----------------------------
 
 _CODE_RE = re.compile(r"^[A-Z]\d{1,3}$")  # L7 / B8 / A10 / etc.
 
 def normalize_code(raw: str) -> Optional[str]:
+    """
+    允许用户输入：
+      - "l7", " L7 ", "L7 Relic", "L7核桃"
+    返回标准 code： "L7"
+    """
     s = raw.strip().upper()
     s = s.replace("核桃", "").replace("RELIC", "").strip()
     s = re.sub(r"\s+", "", s)
@@ -56,6 +71,10 @@ def full_relic_name(era: str, code: str) -> str:
 
 
 def db_query_relic(name: str, db_path: Path = DB_PATH) -> Optional[RelicRow]:
+    """
+    查询数据库，返回 (status_code, last_updated)
+    没找到返回 None
+    """
     if not db_path.exists():
         raise FileNotFoundError(f"找不到数据库文件：{db_path}")
 
@@ -63,6 +82,7 @@ def db_query_relic(name: str, db_path: Path = DB_PATH) -> Optional[RelicRow]:
         conn.row_factory = sqlite3.Row
         cur = conn.cursor()
 
+        # 你表结构：relics(name TEXT, is_vaulted INT, last_updated TEXT)
         cur.execute(
             "SELECT is_vaulted, last_updated FROM relics WHERE name = ?",
             (name,)
@@ -86,6 +106,7 @@ def build_embed(era: str, code: str, result: RelicRow) -> discord.Embed:
 
     embed.add_field(name="判定结果", value=f"**{cfg['label']}**", inline=False)
 
+    # 统一 footer 规则（你原来的逻辑保留，但更一致）
     if result.status_code == 3:
         embed.set_footer(text="提示：当前该核桃可通过阿娅换取（Prime Resurgence）。")
     elif result.status_code == 1:
@@ -103,7 +124,9 @@ def build_error(title: str, msg: str) -> discord.Embed:
     return e
 
 
-
+# -----------------------------
+# 对外：setup 注册命令
+# -----------------------------
 
 def setup(tree: app_commands.CommandTree):
     @tree.command(name="核桃", description="查询核桃是否入库/回归/奸商")
@@ -148,7 +171,7 @@ def setup(tree: app_commands.CommandTree):
             await interaction.followup.send(embed=embed, ephemeral=True)
 
         except sqlite3.OperationalError as e:
-            # 比如表不存在
+            # 比如表不存在、字段名不对
             embed = build_error("核桃查询失败", f"数据库结构错误：{e}")
             await interaction.followup.send(embed=embed, ephemeral=True)
 
